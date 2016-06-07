@@ -1,0 +1,120 @@
+<?php
+
+/**
+* Implements hook_theme_registry_alter
+*/
+function recipe_source_url_theme_registry_alter(&$theme_registry){
+  if(!empty($theme_registry['recipe_summary'])){
+    $theme_registry['recipe_summary']['function'] = 'theme_recipe_summary_source_url';
+    $theme_registry['recipe_summary']['theme path'] = 'sites/all/modules/recipe_source_url';
+  }
+}
+
+/**
+ * Modified version of the Recipe module's default display - render Source field as a link if a Source URL
+ * has been provided.
+ */
+function theme_recipe_summary_source_url($variables) {
+  $node = $variables['node'];
+  $show_title = isset($variables['show_title']) ? $variables['show_title'] : FALSE;
+  $show_yield_form = isset($variables['show_yield_form']) ? $variables['show_yield_form'] : TRUE;
+  // Construct the summary
+  $output = '<div class="recipe-summary">';
+
+  if ( $show_title ) {
+    $output .= '<h2 class="title">' . t('Summary') . '</h2>';
+  }
+
+  $output .= '<table>';
+
+  // Render the yield form.
+  $yield_form = drupal_get_form('recipe_yield_form', $node, $show_yield_form);
+  $output .= '<tr><th class="summary-title">' . t('Yield') . '</th><td class="summary-data">' . drupal_render($yield_form) . '</td></tr>';
+
+  if ($node->recipe_source) {
+    // Render the Source field as a link if a Source URL is present
+    $source_url = !empty($node->field_source_url[LANGUAGE_NONE][0]['url']) ? $node->field_source_url[LANGUAGE_NONE][0]['url'] : NULL;
+    $node->recipe_source = !empty($source_url) ? l($node->recipe_source, $source_url) : $node->recipe_source;
+    $output .= '<tr><th>' . t('Source') . '</th><td>' . $node->recipe_source . '</td></tr>';
+  }
+  if (isset($node->recipe_preptime)) {
+    $_o_minutes = $node->recipe_preptime;
+    $_hours = floor($_o_minutes / 60);
+    $_minutes = $_o_minutes - ($_hours * 60);
+    $_text = '';
+    if ($_hours > 0) {
+      $_text = format_plural($_hours, '1 hour', '@count hours');
+    }
+    if ($_minutes > 0) {
+      if (strlen($_text) > 0) {
+        $_text .= ', ';
+      }
+      $_text .= format_plural($_minutes, '1 minute', '@count minutes');
+    }
+
+
+    // Wrap description in RDFa markup.
+    if ( !empty($node->rdf_mapping['recipe_preptime']) ) {
+      $attributes = rdf_rdfa_attributes($node->rdf_mapping['recipe_preptime']);
+      $attributes['content'] = array(recipe_duration_iso8601($_o_minutes));
+      $_text = theme('rdf_template_variable_wrapper', array('content' => $_text, 'attributes' => $attributes, 'inline' => FALSE));
+    }
+
+    $output .= '<tr><th>' . t('Prep time') . '</th><td>' . $_text . '</td></tr>';
+  }
+
+  if (isset($node->recipe_cooktime)) {
+    $_o_minutes = $node->recipe_cooktime;
+    $_hours = floor($_o_minutes / 60);
+    $_minutes = $_o_minutes - ($_hours * 60);
+    $_text = '';
+    if ($_hours > 0) {
+      $_text = format_plural($_hours, '1 hour', '@count hours');
+    }
+    if ($_minutes > 0) {
+      if (strlen($_text) > 0) {
+        $_text .= ', ';
+      }
+      $_text .= format_plural($_minutes, '1 minute', '@count minutes');
+    }
+
+    // Wrap description in RDFa markup.
+    if ( !empty($node->rdf_mapping['recipe_cooktime']) ) {
+      $attributes = rdf_rdfa_attributes($node->rdf_mapping['recipe_cooktime']);
+      $attributes['content'] = array(recipe_duration_iso8601($_o_minutes));
+      $_text = theme('rdf_template_variable_wrapper', array('content' => $_text, 'attributes' => $attributes, 'inline' => FALSE));
+    }
+
+    $output .= '<tr><th>' . t('Cooking time') . '</th><td>' . $_text . '</td></tr>';
+  }
+
+  if (isset($node->recipe_cooktime) && isset($node->recipe_preptime)) {
+    $_o_minutes = $node->recipe_cooktime + $node->recipe_preptime;
+    $_hours = floor($_o_minutes / 60);
+    $_minutes = $_o_minutes - ($_hours * 60);
+    $_text = '';
+    if ($_hours > 0) {
+      $_text = format_plural($_hours, '1 hour', '@count hours');
+    }
+    if ($_minutes > 0) {
+      if (strlen($_text) > 0) {
+        $_text .= ', ';
+      }
+      $_text .= format_plural($_minutes, '1 minute', '@count minutes');
+    }
+
+    // Wrap description in RDFa markup.
+    if ( !empty($node->rdf_mapping['recipe_totaltime']) ) {
+      $attributes = rdf_rdfa_attributes($node->rdf_mapping['recipe_totaltime']);
+      $attributes['content'] = array(recipe_duration_iso8601($_o_minutes));
+      $_text = theme('rdf_template_variable_wrapper', array('content' => $_text, 'attributes' => $attributes, 'inline' => FALSE));
+    }
+
+    $output .= '<tr><th>' . t('Total time') . '</th><td>' . $_text . '</td></tr>';
+  }
+
+  $output .= '</table>';
+  $output .= '</div>';
+
+  return $output;
+}

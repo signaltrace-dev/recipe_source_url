@@ -1,0 +1,8 @@
+name = Recipe Source URL
+description = Add support for rendering Recipe sources as links.
+core = 7.x
+version = 7.x-dev
+package = Recipe
+
+dependencies[] = link
+dependencies[] = recipe
